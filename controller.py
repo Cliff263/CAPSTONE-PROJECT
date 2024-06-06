@@ -6,7 +6,7 @@ import time
 import json
 
 # Path to the trained joblib ML model
-model_path = r"/home/cjaure/Desktop/Capstone Project/new.joblib"
+model_path = r"/home/cjaure/Desktop/Capstone Project/CAPSTONE-PROJECT/new.joblib"
 
 # Load the ML model
 model = joblib.load(model_path)
