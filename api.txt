@@ -1,0 +1,4 @@
+write key= 5M1JGGBJ0W748980
+read api = 0CN4ZVYDSHS0B317
+channel id=  2559239
+author = mwa0000033519518
