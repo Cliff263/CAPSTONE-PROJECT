@@ -148,7 +148,7 @@ void send_data_to_server(float temp, float humidity, float soil_moisture)
     if (WiFi.status() == WL_CONNECTED) 
     {
         HTTPClient http;
-        String serverPath = "http://192.168.176.112:8501/"; // Streamlit server IP and endpoint
+        String serverPath = "https://capstone-project-final.streamlit.app/"; // Streamlit server IP and endpoint
 
         http.begin(serverPath);
         http.addHeader("Content-Type", "application/json");
