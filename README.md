@@ -16,8 +16,8 @@ NodeMCU Control: Retrieves ML-calculated values and controls irrigation.
 Components
 Soil Moisture Sensor
 Humidity Sensor
-NodeMCU (ESP8266)
-Cloud Platform (e.g., AWS, Google Cloud)
+NodeMCU (ESP32)
+Cloud Platform (Streamlit)
 Machine Learning Model
 Setup
 Connect the soil moisture and humidity sensors to the NodeMCU.
