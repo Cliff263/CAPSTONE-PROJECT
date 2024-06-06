@@ -1,6 +1,3 @@
-
-
-// Blynk template ID and name
 #define BLYNK_TEMPLATE_ID "TMPL2TnVz4vH9"
 #define BLYNK_TEMPLATE_NAME "Smart Irrigation"
 #define BLYNK_AUTH_TOKEN "osKAfPJ15zi-PIdeGskhreifuXXnBTWi"
@@ -9,22 +6,20 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <ThingSpeak.h>
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
 #include <BlynkSimpleEsp32.h>
-#include <HTTPClient.h> 
+#include <HTTPClient.h>
 
 // CHECK THE ESP32 PIN CONFIGURATION
-#define LED 14 
-#define LDR 16
+#define LED 14
+#define LDR 33
 
 const char *RapiKey = "0CN4ZVYDSHS0B317"; // Read API key from ThingSpeak
 String WapiKey = "5M1JGGBJ0W748980"; // Write API key from ThingSpeak
 
 // Channel Details
 unsigned long channelID = 2559239; // Channel Id
-const char *ssid =  "Cliff'sA52s"; // wifi ssid and wpa2 key
-const char *pass =  "12345678";
+const char *ssid = "Cliff'sA52s"; // wifi ssid and wpa2 key
+const char *pass = "12345678";
 const char* host = "api.thingspeak.com";
 unsigned int fieldNumber = 1; // FIELD NUMBER
 const int updateInterval = 15000; // Update interval in milliseconds
@@ -32,40 +27,35 @@ const int updateInterval = 15000; // Update interval in milliseconds
 WiFiClient client;
 WiFiClient client2;
 
-#define DHTPIN 4 // Pin where the DHT22 is connected
+#define DHTPIN 27 // Pin where the DHT22 is connected
 DHT dht(DHTPIN, DHT22);
-int moisture_Pin = 36; // Soil Moisture Sensor input at Analog PIN 36 (VP) on ESP32
-LiquidCrystal_I2C lcd(0x27, 16, 2); // LCD I2C address
+int moisture_Pin = 35; // Soil Moisture Sensor input at Analog PIN VN on ESP32
 
 // Blynk
 char auth[] = "osKAfPJ15zi-PIdeGskhreifuXXnBTWi"; //Blynk auth token
 
-void setup() 
+void setup()
 {
     Serial.begin(115200);
     delay(10);
     dht.begin();
-
-    // Initialize the LCD
-    lcd.begin(); 
-    lcd.backlight();
 
     Serial.println("Connecting to ");
     Serial.println(ssid);
 
     WiFi.begin(ssid, pass);
 
-    while (WiFi.status() != WL_CONNECTED) 
+    while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
         Serial.print(".");
     }
     Serial.println("");
     Serial.println("WiFi connected");
-    
+
     // Initialize ThingSpeak
     ThingSpeak.begin(client2);
-    
+
     // Initialize Blynk
     Blynk.begin(auth, ssid, pass);
 
@@ -79,7 +69,7 @@ void upload_data()
     float t = dht.readTemperature();
     float soil_moisture = read_moisture();
 
-    if (isnan(h) || isnan(t) || isnan(soil_moisture)) 
+    if (isnan(h) || isnan(t) || isnan(soil_moisture))
     {
         Serial.println("Failed to read from sensor!");
         return;
@@ -114,22 +104,6 @@ void upload_data()
         Serial.print(soil_moisture);
         Serial.println("%. Publishing to ThingSpeak.");
 
-        // Update the LCD display
-        lcd.setCursor(0, 0);
-        lcd.print("Temp: ");
-        lcd.print(t);
-        lcd.print("C");
-
-        lcd.setCursor(0, 1);
-        lcd.print("Humidity: ");
-        lcd.print(h);
-        lcd.print("%");
-
-        lcd.setCursor(0, 2);
-        lcd.print("Moisture: ");
-        lcd.print(soil_moisture);
-        lcd.print("%");
-
         // Update Blynk
         Blynk.virtualWrite(V1, t); // Virtual pin V1 for temperature
         Blynk.virtualWrite(V2, h); // Virtual pin V2 for humidity
@@ -145,7 +119,7 @@ void upload_data()
 
 void send_data_to_server(float temp, float humidity, float soil_moisture)
 {
-    if (WiFi.status() == WL_CONNECTED) 
+    if (WiFi.status() == WL_CONNECTED)
     {
         HTTPClient http;
         String serverPath = "https://capstone-project-final.streamlit.app/"; // Streamlit server IP and endpoint
@@ -163,26 +137,26 @@ void send_data_to_server(float temp, float humidity, float soil_moisture)
 
         int httpResponseCode = http.POST(requestBody);
 
-        if (httpResponseCode > 0) 
+        if (httpResponseCode > 0)
         {
             String response = http.getString();
             Serial.println(httpResponseCode);
             Serial.println(response);
-        } 
-        else 
+        }
+        else
         {
             Serial.print("Error on sending POST: ");
             Serial.println(httpResponseCode);
         }
         http.end();
     }
-    else 
+    else
     {
         Serial.println("WiFi Disconnected");
     }
 }
 
-void loop() 
+void loop()
 {
     Blynk.run(); // Run Blynk
 
@@ -198,39 +172,28 @@ void loop()
     Serial.println("LDR Sensor value: ");
     Serial.print(sdata);
     Serial.println();
-    
+
     if(curr_moisture < value) {
         Serial.print("Current soil moisture value is less than required soil moisture.");
         if (sdata == 1) {
             Serial.println("It is night");
             digitalWrite(LED, LOW);
             Serial.println("It's night, no need for irrigation... MOTOR OFF!!!!!!!");
-            lcd.setCursor(0, 3);
-            lcd.print("Night: Motor OFF");
         } else {
             Serial.println("It is day");
             digitalWrite(LED, HIGH); // turn the LED on
             Serial.println("!!!!! MOTOR ON !!!!!!!");
-            lcd.setCursor(0, 3);
-            lcd.print("Day: Motor ON ");
         }
     } else {
         Serial.print("Current soil moisture value is not less than required soil moisture.");
         Serial.println("Sufficient water in the field... MOTOR OFF!!!!!!!");
         digitalWrite(LED, LOW); // Initially LED is turned off
-        lcd.setCursor(0, 3);
-        lcd.print("Water OK: Motor OFF");
     }
-    // Update the LCD with the soil moisture value
-    lcd.setCursor(0, 2);
-    lcd.print("Moisture: ");
-    lcd.print(curr_moisture);
-    lcd.print("%");
-    
+
     // Update Blynk with soil moisture value
     Blynk.virtualWrite(V3, curr_moisture); // Virtual pin V3 for soil moisture
-    
-    // ThingSpeak needs a minimum 15 sec delay between updates 
+
+    // ThingSpeak needs a minimum 15 sec delay between updates
     delay(10000);
 }
 
