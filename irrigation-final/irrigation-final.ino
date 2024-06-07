@@ -13,15 +13,17 @@
 #define LED 14
 #define LDR 33
 
-const char *RapiKey = "0CN4ZVYDSHS0B317"; // Read API key from ThingSpeak
-String WapiKey = "5M1JGGBJ0W748980"; // Write API key from ThingSpeak
+const char *RapiKey = "S2917S2WPFXVAEQY"; // Read API key from ThingSpeak
+String WapiKey = "AH5UTONRL2M1W2J7"; // Write API key from ThingSpeak
 
 // Channel Details
-unsigned long channelID = 2559239; // Channel Id
+unsigned long channelID = 2570062; // Channel Id
 const char *ssid = "Cliff'sA52s"; // wifi ssid and wpa2 key
 const char *pass = "12345678";
 const char* host = "api.thingspeak.com";
-unsigned int fieldNumber = 1; // FIELD NUMBER
+unsigned int fieldSoilMoisture = 1; // Field number for soil moisture
+unsigned int fieldTemp = 2; // Field number for temperature
+unsigned int fieldHum = 3; // Field number for humidity
 const int updateInterval = 15000; // Update interval in milliseconds
 
 WiFiClient client;
@@ -32,7 +34,7 @@ DHT dht(DHTPIN, DHT22);
 int moisture_Pin = 35; // Soil Moisture Sensor input at Analog PIN VN on ESP32
 
 // Blynk
-char auth[] = "osKAfPJ15zi-PIdeGskhreifuXXnBTWi"; //Blynk auth token
+char auth[] = "osKAfPJ15zi-PIdeGskhreifuXXnBTWi"; // Blynk auth token
 
 void setup()
 {
@@ -79,11 +81,11 @@ void upload_data()
     {
         String postStr = WapiKey;
         postStr +="&field1=";
-        postStr += String(t);
-        postStr +="&field2=";
-        postStr += String(h);
-        postStr +="&field3=";
         postStr += String(soil_moisture);
+        postStr +="&field2=";
+        postStr += String(t);
+        postStr +="&field3=";
+        postStr += String(h);
         postStr += "\r\n\r\n";
 
         client.print("POST /update HTTP/1.1\n");
@@ -96,18 +98,18 @@ void upload_data()
         client.print("\n\n");
         client.print(postStr);
 
-        Serial.print("Temperature: ");
+        Serial.print("Soil Moisture: ");
+        Serial.print(soil_moisture);
+        Serial.print("%, Temperature: ");
         Serial.print(t);
         Serial.print(" degrees Celsius, Humidity: ");
         Serial.print(h);
-        Serial.print("%, Soil Moisture: ");
-        Serial.print(soil_moisture);
         Serial.println("%. Publishing to ThingSpeak.");
 
         // Update Blynk
-        Blynk.virtualWrite(V1, t); // Virtual pin V1 for temperature
-        Blynk.virtualWrite(V2, h); // Virtual pin V2 for humidity
-        Blynk.virtualWrite(V3, soil_moisture); // Virtual pin V3 for soil moisture
+        Blynk.virtualWrite(V1, soil_moisture); // Virtual pin V1 for soil moisture
+        Blynk.virtualWrite(V2, t); // Virtual pin V2 for temperature
+        Blynk.virtualWrite(V3, h); // Virtual pin V3 for humidity
     }
     client.stop();
 
@@ -173,7 +175,7 @@ void loop()
     Serial.print(sdata);
     Serial.println();
 
-    if(curr_moisture < value) {
+    if (curr_moisture < value) {
         Serial.print("Current soil moisture value is less than required soil moisture.");
         if (sdata == 1) {
             Serial.println("It is night");
@@ -191,7 +193,7 @@ void loop()
     }
 
     // Update Blynk with soil moisture value
-    Blynk.virtualWrite(V3, curr_moisture); // Virtual pin V3 for soil moisture
+    Blynk.virtualWrite(V1, curr_moisture); // Virtual pin V1 for soil moisture
 
     // ThingSpeak needs a minimum 15 sec delay between updates
     delay(10000);
@@ -207,6 +209,6 @@ float read_moisture()
 
 float fetchdata()
 {
-    float value = ThingSpeak.readFloatField(channelID, fieldNumber, RapiKey);
+    float value = ThingSpeak.readFloatField(channelID, fieldSoilMoisture, RapiKey);
     return value;
 }

@@ -1,0 +1,53 @@
+ESP32 Module:
++------------------+
+|                  |
+|      GND ------- +-----GND (Soil Moisture Sensor)
+|                  +-----GND (DHT22 Sensor)
+|                  +-----GND (Relay Module)
+|                  +-----GND (LDR Sensor) through 10k resistor
+|                  |
+|      3.3V -------+-----VCC (Soil Moisture Sensor)
+|                  +-----VCC (DHT22 Sensor)
+|                  +-----LDR Sensor
+|                  |
+|      GPIO 35 ----+-----Signal (Soil Moisture Sensor)
+|                  |
+|      GPIO 27 ----+-----Signal (DHT22 Sensor)
+|                  |
+|      GPIO 33 ----+-----One pin of LDR Sensor
+|                  +-----Other pin of LDR Sensor through 10k resistor to GND
+|                  |
+|      GPIO 14 ----+-----IN (Relay Module)
+|                  |
+|      5V ---------+-----VCC (Relay Module)
+|                  |
++------------------+
+
+Relay Module:
++------------------+
+|     VCC ---------+-----5V (ESP32)
+|     GND ---------+-----GND (ESP32)
+|     IN ----------+-----GPIO 14 (ESP32)
+|                  |
+|     NO ----------+-----Water Pump (+)
+|     COM ---------+-----Water Pump (-)
+|                  |
++------------------+
+
+
+Connecting the Water Pump
+Relay Module:
+
+NO (Normally Open): Connect to the positive terminal of the Water Pump.
+COM (Common): Connect to the negative terminal of the Water Pump.
+Water Pump:
+
+Positive terminal connects to NO on the Relay Module.
+Negative terminal connects to COM on the Relay Module.
+Use a separate 9V power supply to power the Water Pump. Ensure the ground of the 9V power supply is connected to the ground of the ESP32 and other components.
+Breadboard Layout
+Place the ESP32 Module on the breadboard.
+Place the Soil Moisture Sensor, DHT22 Sensor, LDR Sensor, and Relay Module on the breadboard.
+Use jumper wires to make connections between the ESP32 and the sensors/relay as per the schematic.
+Ensure all grounds are connected together to form a common ground.
+Connect the 9V power supply to power the ESP32 and the Water Pump.
