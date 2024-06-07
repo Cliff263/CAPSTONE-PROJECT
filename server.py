@@ -57,12 +57,12 @@ st.dataframe(data)
 # Plot time series graphs for fluctuations
 st.subheader("Sensor Data Fluctuations")
 
-# Resample data for 4-hour intervals
+## Resample data for 15-second intervals
 if not data.empty:
     data['timestamp'] = pd.to_datetime(data['timestamp'])
     data.set_index('timestamp', inplace=True)
     
-    resampled_data = data.resample('4H').mean()
+    resampled_data = data.resample('15S').mean()
 
     fig, ax = plt.subplots(3, 1, figsize=(10, 15))
     
@@ -87,6 +87,7 @@ if not data.empty:
     st.pyplot(fig)
 else:
     st.write("No data to display yet.")
+
 
 # Handle POST requests directly in Streamlit
 query_params = st.query_params

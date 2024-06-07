@@ -1,3 +1,18 @@
+Circuit Connections
+
+ESP32 Pin Mapping:
+    - DHT22 Data Pin: GPIO 27 (D27)
+    - Soil Moisture Sensor Analog Pin: GPIO 35 (D35)
+    - LDR Analog Pin: GPIO 33 (D33)
+LED Pin: GPIO 14 (D14)
+
+Relay Control Pin: GPIO 26 (D26)
+
+Power Supply:
+    - ESP32: Powered via the USB port or a 5V regulated power supply connected to the VIN pin.
+    - Water Pump: Powered via a separate 9V power supply. The relay will control the connection between the power supply and the pump.
+
+Schematic Diagram:
 ESP32 Module:
 +------------------+
 |                  |
@@ -34,20 +49,60 @@ Relay Module:
 |                  |
 +------------------+
 
+Circuit Connections
 
-Connecting the Water Pump
-Relay Module:
+1. DHT22 Sensor:
 
-NO (Normally Open): Connect to the positive terminal of the Water Pump.
-COM (Common): Connect to the negative terminal of the Water Pump.
-Water Pump:
+    - VCC to 3.3V (3V3) on the ESP32
+    - GND to GND on the ESP32
+    - Data pin to GPIO 27 (D27) on the ESP32 with a 10kΩ pull-up resistor to 3.3V
 
-Positive terminal connects to NO on the Relay Module.
-Negative terminal connects to COM on the Relay Module.
-Use a separate 9V power supply to power the Water Pump. Ensure the ground of the 9V power supply is connected to the ground of the ESP32 and other components.
-Breadboard Layout
-Place the ESP32 Module on the breadboard.
-Place the Soil Moisture Sensor, DHT22 Sensor, LDR Sensor, and Relay Module on the breadboard.
-Use jumper wires to make connections between the ESP32 and the sensors/relay as per the schematic.
-Ensure all grounds are connected together to form a common ground.
-Connect the 9V power supply to power the ESP32 and the Water Pump.
+2. Soil Moisture Sensor:
+   - VCC (+) to 3.3V (3V3) on the ESP32
+   - GND (-) to GND on the ESP32
+   - Signal (S) to GPIO 35 (D35) on the ESP32
+
+3. LDR (Light Dependent Resistor):
+   - One end of the LDR to 3.3V (3V3)
+   - The other end of the LDR to GPIO 33 (D33) on the ESP32 through a 10kΩ resistor connected to GND (forming a voltage divider)
+
+4. LED:
+   - Anode (longer leg) to GPIO 14 (D14) on the ESP32 through a 220Ω resistor
+   - Cathode (shorter leg) to GND on the ESP32
+
+5. Relay Module:
+   - IN to GPIO 26 (D26) on the ESP32
+   - DC+ to 5V (VIN) on the ESP32
+   - DC- to GND on the ESP32
+   - NO (Normally Open) to the positive terminal of the 9V power supply
+   - COM (Common) to the positive terminal of the water pump
+   - GND of the water pump to the negative terminal of the 9V power supply
+
+6. Water Pump:
+   - Positive terminal to the COM terminal of the relay
+   - Negative terminal to the GND line of the 9V power supply
+
+Finalized Schematic Diagram:
+```plaintext
+                 +-------------+               +-------------+
+                 |    ESP32    |               |  Relay      |
+                 |             |               |  Module     |
+                 |             |               |             |
+         +3.3V   +---+         |               |         NO  +---(+) 9V Power Supply
+           GND   +---+         |               |         COM +-----> Water Pump (+)
+     GPIO 27 <--+---| DHT22    |               |         NC  | 
+     GPIO 35 <--+---| Moisture |               |         DC+ +-----> 5V (VIN)
+     GPIO 33 <--+---| LDR      |               |         DC- +-----> GND
+     GPIO 14 -->|---| LED      |
+     GPIO 26 -->|---| Relay    |
+                 |             |
+                 +-------------+
+```
+
+Additional Notes:
+
+- Ensure all GND connections are common to avoid potential differences that could affect sensor readings.
+- The ESP32 should be powered via a stable power source, either through the USB or a dedicated 5V regulated power supply connected to the VIN pin.
+- Use appropriate wire gauges for connections, especially for the relay and water pump to handle the current.
+- Double-check all connections before powering up the system to prevent any shorts or misconfigurations.
+

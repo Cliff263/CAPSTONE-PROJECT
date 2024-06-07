@@ -32,7 +32,7 @@ def fetch_precipitation_data(api_key, city_name):
 
 def thingspeak_publish(val1):
     URL = 'https://api.thingspeak.com/update?api_key='
-    KEY = '5M1JGGBJ0W748980'
+    KEY = 'AH5UTONRL2M1W2J7'
     HEADER = '&field4={val:.2f}'.format(val=val1)
     new_URL = URL + KEY + HEADER
     data = urllib.request.urlopen(new_URL)
@@ -46,7 +46,7 @@ result = [0.00, 0.00]
 def thinkspeak_subscribe():
     # ThingSpeak API endpoint and parameters
     api_endpoint = "https://api.thingspeak.com/channels/2559239/feeds.json"
-    api_key = "0CN4ZVYDSHS0B317"  # ThingSpeak read API key
+    api_key = "S2917S2WPFXVAEQY"  # ThingSpeak read API key
     results = 1   # Number of latest results to retrieve
 
     # Construct the API request URL

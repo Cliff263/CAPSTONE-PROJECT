@@ -18,8 +18,8 @@ String WapiKey = "AH5UTONRL2M1W2J7"; // Write API key from ThingSpeak
 
 // Channel Details
 unsigned long channelID = 2570062; // Channel Id
-const char *ssid = "Cliff'sA52s"; // wifi ssid and wpa2 key
-const char *pass = "12345678";
+const char *ssid = "Cliff's A52s"; // wifi ssid and wpa2 key
+const char *pass = "123456789";
 const char* host = "api.thingspeak.com";
 unsigned int fieldSoilMoisture = 1; // Field number for soil moisture
 unsigned int fieldTemp = 2; // Field number for temperature
@@ -164,7 +164,7 @@ void loop()
 
     int sdata = digitalRead(LDR);
     upload_data();
-    delay(15);
+    delay(updateInterval);
     float value = fetchdata();
     Serial.print("Required soil moisture value: ");
     Serial.println(value);
@@ -196,7 +196,7 @@ void loop()
     Blynk.virtualWrite(V1, curr_moisture); // Virtual pin V1 for soil moisture
 
     // ThingSpeak needs a minimum 15 sec delay between updates
-    delay(10000);
+    delay(updateInterval);
 }
 
 float read_moisture()
