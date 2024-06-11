@@ -16,9 +16,14 @@ data = pd.DataFrame(columns=['timestamp', 'temp', 'humidity', 'soil_moisture', '
 # Define a function to predict irrigation timing
 def predict_irrigation(temp, humidity, soil_moisture):
     features = np.array([[temp, humidity, soil_moisture]])
+    st.write("Features:", features)  # Log the features
     st.write("Features shape:", features.shape)  # Log the shape of features
-    prediction = model.predict(features)
-    return prediction[0]
+    try:
+        prediction = model.predict(features)
+        return prediction[0]
+    except ValueError as e:
+        st.error(f"ValueError: {e}")
+        return None
 
 # Function to add new data
 def add_new_data(temp, humidity, soil_moisture, prediction):
@@ -43,7 +48,8 @@ def handle_post_request(request):
     prediction = predict_irrigation(temp, humidity, soil_moisture)
     
     # Store data in the dataframe
-    add_new_data(temp, humidity, soil_moisture, prediction)
+    if prediction is not None:
+        add_new_data(temp, humidity, soil_moisture, prediction)
     
     response = {'prediction': prediction}
     return response
@@ -57,14 +63,16 @@ for _ in range(20):  # Adding 20 entries
     humidity = np.random.uniform(50, 70)  # Random humidity between 50 and 70
     soil_moisture = np.random.uniform(60, 80)  # Random soil moisture between 60 and 80
     prediction = predict_irrigation(temp, humidity, soil_moisture)
-    add_new_data(temp, humidity, soil_moisture, prediction)
+    if prediction is not None:
+        add_new_data(temp, humidity, soil_moisture, prediction)
 
 # Add specific data point for prediction
 temp = 22
 humidity = 56
 soil_moisture = 75
 prediction = predict_irrigation(temp, humidity, soil_moisture)
-add_new_data(temp, humidity, soil_moisture, prediction)
+if prediction is not None:
+    add_new_data(temp, humidity, soil_moisture, prediction)
 
 # Display the data in tabular form
 st.subheader("Sensor Data")
