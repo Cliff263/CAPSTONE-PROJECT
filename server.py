@@ -9,6 +9,7 @@ import requests
 import matplotlib.pyplot as plt
 from requests.exceptions import ConnectionError, Timeout, RequestException
 import time
+import socket
 
 # Load your model
 model = load('new.joblib')
@@ -49,6 +50,9 @@ def fetch_blynk_data(retries=3, delay=5):
             break
         except ValueError as e:
             st.error(f"Data conversion error: {e}")
+            break
+        except socket.gaierror as e:
+            st.error(f"DNS resolution error: {e}")
             break
     
     st.error("Failed to fetch data from Blynk after multiple attempts")
