@@ -16,6 +16,7 @@ data = pd.DataFrame(columns=['timestamp', 'temp', 'humidity', 'soil_moisture', '
 # Define a function to predict irrigation timing
 def predict_irrigation(temp, humidity, soil_moisture):
     features = np.array([[temp, humidity, soil_moisture]])
+    st.write("Features shape:", features.shape)  # Log the shape of features
     prediction = model.predict(features)
     return prediction[0]
 
@@ -102,7 +103,6 @@ if not data.empty:
     st.pyplot(fig)
 else:
     st.write("No data to display yet.")
-
 
 # Handle POST requests directly in Streamlit
 query_params = st.query_params
