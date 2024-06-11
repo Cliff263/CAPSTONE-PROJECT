@@ -50,13 +50,6 @@ def handle_post_request(request):
 # Streamlit App
 st.title("Smart Irrigation Prediction")
 
-# Add specific data point for display and prediction
-temp = 50
-humidity = 22
-soil_moisture = 78
-prediction = predict_irrigation(temp, humidity, soil_moisture)
-add_new_data(temp, humidity, soil_moisture, prediction)
-
 # Display the data in tabular form
 st.subheader("Sensor Data")
 st.dataframe(data)
@@ -94,6 +87,7 @@ if not data.empty:
     st.pyplot(fig)
 else:
     st.write("No data to display yet.")
+
 
 # Handle POST requests directly in Streamlit
 query_params = st.query_params
