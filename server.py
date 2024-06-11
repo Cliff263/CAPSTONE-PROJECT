@@ -5,58 +5,13 @@ import datetime
 from joblib import load
 from sklearn.ensemble import RandomForestRegressor
 import json
-import requests
 import matplotlib.pyplot as plt
-from requests.exceptions import ConnectionError, Timeout, RequestException
-import time
-import socket
 
 # Load your model
 model = load('new.joblib')
 
 # Initialize a dataframe to store sensor data
 data = pd.DataFrame(columns=['timestamp', 'temp', 'humidity', 'soil_moisture', 'prediction'])
-
-# Blynk configuration
-BLYNK_AUTH_TOKEN = "osKAfPJ15zi-PIdeGskhreifuXXnBTWi"
-BLYNK_API_URL = f"http://blynk-cloud.com/{BLYNK_AUTH_TOKEN}/get"
-
-# Define a function to fetch data from Blynk
-def fetch_blynk_data(retries=3, delay=5):
-    temp_url = f"{BLYNK_API_URL}/V2"
-    humidity_url = f"{BLYNK_API_URL}/V3"
-    soil_moisture_url = f"{BLYNK_API_URL}/V1"
-    
-    for i in range(retries):
-        try:
-            temp_response = requests.get(temp_url)
-            humidity_response = requests.get(humidity_url)
-            soil_moisture_response = requests.get(soil_moisture_url)
-            
-            temp_response.raise_for_status()
-            humidity_response.raise_for_status()
-            soil_moisture_response.raise_for_status()
-            
-            temp = float(temp_response.json()[0])
-            humidity = float(humidity_response.json()[0])
-            soil_moisture = float(soil_moisture_response.json()[0])
-            return temp, humidity, soil_moisture
-        
-        except (ConnectionError, Timeout) as e:
-            st.error(f"Network error: {e}. Retrying in {delay} seconds...")
-            time.sleep(delay)
-        except RequestException as e:
-            st.error(f"Request error: {e}")
-            break
-        except ValueError as e:
-            st.error(f"Data conversion error: {e}")
-            break
-        except socket.gaierror as e:
-            st.error(f"DNS resolution error: {e}")
-            break
-    
-    st.error("Failed to fetch data from Blynk after multiple attempts")
-    return None, None, None
 
 # Define a function to predict irrigation timing
 def predict_irrigation(temp, humidity, soil_moisture):
@@ -76,18 +31,39 @@ def add_new_data(temp, humidity, soil_moisture, prediction):
     }
     data = data.append(new_data, ignore_index=True)
 
+# Function to handle POST requests
+def handle_post_request(request):
+    request_data = json.loads(request.body)
+    temp = request_data['temp']
+    humidity = request_data['humidity']
+    soil_moisture = request_data['soil_moisture']
+    
+    # Make prediction
+    prediction = predict_irrigation(temp, humidity, soil_moisture)
+    
+    # Store data in the dataframe
+    add_new_data(temp, humidity, soil_moisture, prediction)
+    
+    response = {'prediction': prediction}
+    return response
+
 # Streamlit App
 st.title("Smart Irrigation Prediction")
 
-# Fetch data from Blynk
-temp, humidity, soil_moisture = fetch_blynk_data()
-
-# If data is successfully fetched, make a prediction and add it to the dataframe
-if temp is not None and humidity is not None and soil_moisture is not None:
+# Add random data to the dataframe
+for _ in range(20):  # Adding 20 entries
+    temp = np.random.uniform(20, 30)  # Random temperature between 20 and 30
+    humidity = np.random.uniform(50, 70)  # Random humidity between 50 and 70
+    soil_moisture = np.random.uniform(60, 80)  # Random soil moisture between 60 and 80
     prediction = predict_irrigation(temp, humidity, soil_moisture)
     add_new_data(temp, humidity, soil_moisture, prediction)
-    st.write(f"Latest Data: Temperature: {temp} °C, Humidity: {humidity} %, Soil Moisture: {soil_moisture} %")
-    st.write(f"Prediction: {prediction} %")
+
+# Add specific data point for prediction
+temp = 22
+humidity = 56
+soil_moisture = 75
+prediction = predict_irrigation(temp, humidity, soil_moisture)
+add_new_data(temp, humidity, soil_moisture, prediction)
 
 # Display the data in tabular form
 st.subheader("Sensor Data")
@@ -96,6 +72,7 @@ st.dataframe(data)
 # Plot time series graphs for fluctuations
 st.subheader("Sensor Data Fluctuations")
 
+## Resample data for 15-second intervals
 if not data.empty:
     data['timestamp'] = pd.to_datetime(data['timestamp'])
     data.set_index('timestamp', inplace=True)
@@ -125,3 +102,12 @@ if not data.empty:
     st.pyplot(fig)
 else:
     st.write("No data to display yet.")
+
+
+# Handle POST requests directly in Streamlit
+query_params = st.query_params
+if query_params:
+    if 'body' in query_params:
+        request = query_params
+        response = handle_post_request(request)
+        st.write(response)
