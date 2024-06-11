@@ -5,6 +5,7 @@ import datetime
 from joblib import load
 from sklearn.ensemble import RandomForestRegressor
 import json
+import requests
 import matplotlib.pyplot as plt
 
 # Load your model
@@ -12,6 +13,29 @@ model = load('new.joblib')
 
 # Initialize a dataframe to store sensor data
 data = pd.DataFrame(columns=['timestamp', 'temp', 'humidity', 'soil_moisture', 'prediction'])
+
+# Blynk configuration
+BLYNK_AUTH_TOKEN = "osKAfPJ15zi-PIdeGskhreifuXXnBTWi"
+BLYNK_API_URL = f"http://blynk-cloud.com/{BLYNK_AUTH_TOKEN}/get"
+
+# Define a function to fetch data from Blynk
+def fetch_blynk_data():
+    temp_url = f"{BLYNK_API_URL}/V2"
+    humidity_url = f"{BLYNK_API_URL}/V3"
+    soil_moisture_url = f"{BLYNK_API_URL}/V1"
+    
+    temp_response = requests.get(temp_url)
+    humidity_response = requests.get(humidity_url)
+    soil_moisture_response = requests.get(soil_moisture_url)
+    
+    if temp_response.status_code == 200 and humidity_response.status_code == 200 and soil_moisture_response.status_code == 200:
+        temp = float(temp_response.json()[0])
+        humidity = float(humidity_response.json()[0])
+        soil_moisture = float(soil_moisture_response.json()[0])
+        return temp, humidity, soil_moisture
+    else:
+        st.error("Failed to fetch data from Blynk")
+        return None, None, None
 
 # Define a function to predict irrigation timing
 def predict_irrigation(temp, humidity, soil_moisture):
@@ -31,24 +55,18 @@ def add_new_data(temp, humidity, soil_moisture, prediction):
     }
     data = data.append(new_data, ignore_index=True)
 
-# Function to handle POST requests
-def handle_post_request(request):
-    request_data = json.loads(request.body)
-    temp = request_data['temp']
-    humidity = request_data['humidity']
-    soil_moisture = request_data['soil_moisture']
-    
-    # Make prediction
-    prediction = predict_irrigation(temp, humidity, soil_moisture)
-    
-    # Store data in the dataframe
-    add_new_data(temp, humidity, soil_moisture, prediction)
-    
-    response = {'prediction': prediction}
-    return response
-
 # Streamlit App
 st.title("Smart Irrigation Prediction")
+
+# Fetch data from Blynk
+temp, humidity, soil_moisture = fetch_blynk_data()
+
+# If data is successfully fetched, make a prediction and add it to the dataframe
+if temp is not None and humidity is not None and soil_moisture is not None:
+    prediction = predict_irrigation(temp, humidity, soil_moisture)
+    add_new_data(temp, humidity, soil_moisture, prediction)
+    st.write(f"Latest Data: Temperature: {temp} °C, Humidity: {humidity} %, Soil Moisture: {soil_moisture} %")
+    st.write(f"Prediction: {prediction} %")
 
 # Display the data in tabular form
 st.subheader("Sensor Data")
@@ -57,7 +75,6 @@ st.dataframe(data)
 # Plot time series graphs for fluctuations
 st.subheader("Sensor Data Fluctuations")
 
-## Resample data for 15-second intervals
 if not data.empty:
     data['timestamp'] = pd.to_datetime(data['timestamp'])
     data.set_index('timestamp', inplace=True)
@@ -87,12 +104,3 @@ if not data.empty:
     st.pyplot(fig)
 else:
     st.write("No data to display yet.")
-
-
-# Handle POST requests directly in Streamlit
-query_params = st.query_params
-if query_params:
-    if 'body' in query_params:
-        request = query_params
-        response = handle_post_request(request)
-        st.write(response)
