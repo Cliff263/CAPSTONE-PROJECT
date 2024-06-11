@@ -7,6 +7,8 @@ from sklearn.ensemble import RandomForestRegressor
 import json
 import requests
 import matplotlib.pyplot as plt
+from requests.exceptions import ConnectionError, Timeout, RequestException
+import time
 
 # Load your model
 model = load('new.joblib')
@@ -19,23 +21,38 @@ BLYNK_AUTH_TOKEN = "osKAfPJ15zi-PIdeGskhreifuXXnBTWi"
 BLYNK_API_URL = f"http://blynk-cloud.com/{BLYNK_AUTH_TOKEN}/get"
 
 # Define a function to fetch data from Blynk
-def fetch_blynk_data():
+def fetch_blynk_data(retries=3, delay=5):
     temp_url = f"{BLYNK_API_URL}/V2"
     humidity_url = f"{BLYNK_API_URL}/V3"
     soil_moisture_url = f"{BLYNK_API_URL}/V1"
     
-    temp_response = requests.get(temp_url)
-    humidity_response = requests.get(humidity_url)
-    soil_moisture_response = requests.get(soil_moisture_url)
+    for i in range(retries):
+        try:
+            temp_response = requests.get(temp_url)
+            humidity_response = requests.get(humidity_url)
+            soil_moisture_response = requests.get(soil_moisture_url)
+            
+            temp_response.raise_for_status()
+            humidity_response.raise_for_status()
+            soil_moisture_response.raise_for_status()
+            
+            temp = float(temp_response.json()[0])
+            humidity = float(humidity_response.json()[0])
+            soil_moisture = float(soil_moisture_response.json()[0])
+            return temp, humidity, soil_moisture
+        
+        except (ConnectionError, Timeout) as e:
+            st.error(f"Network error: {e}. Retrying in {delay} seconds...")
+            time.sleep(delay)
+        except RequestException as e:
+            st.error(f"Request error: {e}")
+            break
+        except ValueError as e:
+            st.error(f"Data conversion error: {e}")
+            break
     
-    if temp_response.status_code == 200 and humidity_response.status_code == 200 and soil_moisture_response.status_code == 200:
-        temp = float(temp_response.json()[0])
-        humidity = float(humidity_response.json()[0])
-        soil_moisture = float(soil_moisture_response.json()[0])
-        return temp, humidity, soil_moisture
-    else:
-        st.error("Failed to fetch data from Blynk")
-        return None, None, None
+    st.error("Failed to fetch data from Blynk after multiple attempts")
+    return None, None, None
 
 # Define a function to predict irrigation timing
 def predict_irrigation(temp, humidity, soil_moisture):
