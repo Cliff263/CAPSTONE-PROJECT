@@ -16,14 +16,8 @@ data = pd.DataFrame(columns=['timestamp', 'temp', 'humidity', 'soil_moisture', '
 # Define a function to predict irrigation timing
 def predict_irrigation(temp, humidity, soil_moisture):
     features = np.array([[temp, humidity, soil_moisture]])
-    st.write("Features:", features)  # Log the features
-    st.write("Features shape:", features.shape)  # Log the shape of features
-    try:
-        prediction = model.predict(features)
-        return prediction[0]
-    except ValueError as e:
-        st.error(f"ValueError: {e}")
-        return None
+    prediction = model.predict(features)
+    return prediction[0]
 
 # Function to add new data
 def add_new_data(temp, humidity, soil_moisture, prediction):
@@ -48,8 +42,7 @@ def handle_post_request(request):
     prediction = predict_irrigation(temp, humidity, soil_moisture)
     
     # Store data in the dataframe
-    if prediction is not None:
-        add_new_data(temp, humidity, soil_moisture, prediction)
+    add_new_data(temp, humidity, soil_moisture, prediction)
     
     response = {'prediction': prediction}
     return response
@@ -57,22 +50,12 @@ def handle_post_request(request):
 # Streamlit App
 st.title("Smart Irrigation Prediction")
 
-# Add random data to the dataframe
-for _ in range(20):  # Adding 20 entries
-    temp = np.random.uniform(20, 30)  # Random temperature between 20 and 30
-    humidity = np.random.uniform(50, 70)  # Random humidity between 50 and 70
-    soil_moisture = np.random.uniform(60, 80)  # Random soil moisture between 60 and 80
-    prediction = predict_irrigation(temp, humidity, soil_moisture)
-    if prediction is not None:
-        add_new_data(temp, humidity, soil_moisture, prediction)
-
-# Add specific data point for prediction
-temp = 22
-humidity = 56
-soil_moisture = 75
+# Add specific data point for display and prediction
+temp = 50
+humidity = 22
+soil_moisture = 78
 prediction = predict_irrigation(temp, humidity, soil_moisture)
-if prediction is not None:
-    add_new_data(temp, humidity, soil_moisture, prediction)
+add_new_data(temp, humidity, soil_moisture, prediction)
 
 # Display the data in tabular form
 st.subheader("Sensor Data")
