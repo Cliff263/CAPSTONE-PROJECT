@@ -1,6 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
+import { AppChrome } from "@/components/app-chrome";
+import { MotionProvider } from "@/components/motion/motion-provider";
+import { QueryProvider } from "@/components/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
@@ -18,6 +21,19 @@ export const metadata: Metadata = {
   title: "Square Notes",
   description:
     "A focused note-taking workspace with a futuristic calendar for everything coming up.",
+  appleWebApp: { capable: true, title: "Square Notes", statusBarStyle: "black-translucent" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Lets the app paint under the notch; safe-area padding is applied in CSS.
+  viewportFit: "cover",
+  colorScheme: "dark light",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f4f5" },
+  ],
 };
 
 /** Applies the stored theme before paint so there is no light-mode flash. */
@@ -40,7 +56,14 @@ export default function RootLayout({
       </head>
       <body className="min-h-full">
         <SessionProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <QueryProvider>
+            <ThemeProvider>
+              <MotionProvider>
+                {children}
+                <AppChrome />
+              </MotionProvider>
+            </ThemeProvider>
+          </QueryProvider>
         </SessionProvider>
       </body>
     </html>

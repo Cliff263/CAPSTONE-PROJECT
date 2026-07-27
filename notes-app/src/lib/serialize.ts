@@ -1,8 +1,9 @@
 import type { DbEvent, DbNote } from "@/db/schema";
 import type { CalendarEvent, EventColor, Note } from "./types";
 
-export function serializeNote(row: DbNote): Note {
+export function serializeNote(row: DbNote, snippet?: string | null): Note {
   return {
+    ...(snippet ? { searchSnippet: snippet } : null),
     id: row.id,
     title: row.title,
     content: row.content,
@@ -13,6 +14,8 @@ export function serializeNote(row: DbNote): Note {
     archived: row.archived,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    deletedAt: row.deletedAt?.toISOString() ?? null,
+    dueAt: row.dueAt?.toISOString() ?? null,
   };
 }
 
@@ -26,6 +29,7 @@ export function serializeEvent(row: DbEvent): CalendarEvent {
     endsAt: row.endsAt.toISOString(),
     allDay: row.allDay,
     color: row.color as EventColor,
+    noteId: row.noteId,
     createdAt: row.createdAt.toISOString(),
   };
 }

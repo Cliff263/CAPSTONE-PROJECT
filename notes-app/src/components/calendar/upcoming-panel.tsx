@@ -1,7 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CalendarClock, Clock, MapPin } from "lucide-react";
+import { CalendarClock, Clock, FileText, MapPin } from "lucide-react";
+import Link from "next/link";
+import { ROUTES } from "@/lib/routes";
+import { useDueNotes } from "@/hooks/use-notes";
+import { useNotesStore } from "@/store/notes-store";
 import type { CalendarEvent } from "@/lib/types";
 import {
   cn,
@@ -24,6 +28,13 @@ export function UpcomingPanel({
   onCreateOn: (day: Date) => void;
 }) {
   const now = useNow();
+  const select = useNotesStore((state) => state.select);
+  // Notes carrying a due date are fetched as their own slice, ordered by the
+  // database, so the panel does not depend on the note list being loaded.
+  const { data: due = [] } = useDueNotes();
+  const dueNotes = due
+    .filter((note) => new Date(note.dueAt!).getTime() >= now - 86_400_000)
+    .slice(0, 5);
 
   const dayEvents = events.filter((event) =>
     isSameDay(new Date(event.startsAt), selectedDay),
@@ -35,7 +46,7 @@ export function UpcomingPanel({
     .slice(0, 6);
 
   return (
-    <aside className="hidden h-full w-[320px] shrink-0 flex-col border-l border-line bg-panel xl:flex">
+    <aside className="flex w-full shrink-0 flex-col border-t border-line bg-panel lg:h-full lg:w-[320px] lg:border-l lg:border-t-0">
       <header className="border-b border-line px-4 py-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-2">
           {relativeDayLabel(selectedDay)}
@@ -49,7 +60,7 @@ export function UpcomingPanel({
         </h2>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scroll-thin">
+      <div className="pb-navbar px-4 py-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-4 scroll-thin">
         {dayEvents.length === 0 ? (
           <button
             type="button"
@@ -70,6 +81,32 @@ export function UpcomingPanel({
                 onClick={() => onOpenEvent(event)}
               />
             ))}
+          </div>
+        )}
+
+        {dueNotes.length > 0 && (
+          <div className="mt-7">
+            <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-2">
+              Notes due
+            </p>
+            <div className="space-y-1.5">
+              {dueNotes.map((note) => (
+                <Link
+                  key={note.id}
+                  href={ROUTES.all}
+                  onClick={() => select(note.id)}
+                  className="flex items-center gap-2 rounded-lg border border-line bg-card px-2.5 py-2 transition hover:bg-card-hover"
+                >
+                  <FileText className="size-3.5 shrink-0 text-glow-2" />
+                  <span className="min-w-0 flex-1 truncate text-[12px]">
+                    {note.title || "Untitled note"}
+                  </span>
+                  <span className="shrink-0 text-[10px] text-muted-2">
+                    {relativeDayLabel(note.dueAt!)}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 

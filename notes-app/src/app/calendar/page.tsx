@@ -1,22 +1,26 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import dynamic from "next/dynamic";
 import { CalendarView } from "@/components/calendar/calendar-view";
-import {
-  EventModal,
-  type EventModalState,
-} from "@/components/calendar/event-modal";
+
+// The modal is only reachable behind a click, so it stays out of first paint.
+const EventModal = dynamic(
+  () => import("@/components/calendar/event-modal").then((m) => m.EventModal),
+  { ssr: false },
+);
+import type { EventModalState } from "@/components/calendar/event-modal";
 import { UpcomingPanel } from "@/components/calendar/upcoming-panel";
+import { MobileNav } from "@/components/mobile-nav";
+import { MobileTopBar } from "@/components/mobile-top-bar";
 import { Sidebar } from "@/components/sidebar";
-import { useEventsStore } from "@/store/events-store";
+import { SidebarDrawer } from "@/components/sidebar-drawer";
+import { useEvents } from "@/hooks/use-events";
 import { useNotesStore } from "@/store/notes-store";
 
 export default function CalendarPage() {
-  const loadEvents = useEventsStore((state) => state.load);
-  const events = useEventsStore((state) => state.events);
-  const loadNotes = useNotesStore((state) => state.load);
-  const notesStatus = useNotesStore((state) => state.status);
+  const { data: events = [] } = useEvents();
   const sidebarOpen = useNotesStore((state) => state.sidebarOpen);
 
   const [cursor, setCursor] = useState(() => {
@@ -25,15 +29,6 @@ export default function CalendarPage() {
   });
   const [selectedDay, setSelectedDay] = useState(() => new Date());
   const [modal, setModal] = useState<EventModalState>({ mode: "closed" });
-
-  useEffect(() => {
-    void loadEvents();
-  }, [loadEvents]);
-
-  // The sidebar shows categories and tags, so it needs the notes too.
-  useEffect(() => {
-    if (notesStatus === "idle") void loadNotes();
-  }, [notesStatus, loadNotes]);
 
   return (
     <main className="flex h-dvh overflow-hidden bg-background">
@@ -44,30 +39,41 @@ export default function CalendarPage() {
             animate={{ width: 248, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="h-full shrink-0 overflow-hidden"
+            className="hidden h-full shrink-0 overflow-hidden lg:block"
           >
-            <Sidebar section="calendar" />
+            <Sidebar />
           </motion.div>
         )}
       </AnimatePresence>
 
-      <CalendarView
-        events={events}
-        cursor={cursor}
-        onCursorChange={setCursor}
-        selectedDay={selectedDay}
-        onSelectDay={setSelectedDay}
-        onCreateOn={(day) => setModal({ mode: "create", day })}
-        onOpenEvent={(event) => setModal({ mode: "edit", event })}
-      />
+      <SidebarDrawer />
 
-      <UpcomingPanel
-        events={events}
-        selectedDay={selectedDay}
-        onOpenEvent={(event) => setModal({ mode: "edit", event })}
-        onCreateOn={(day) => setModal({ mode: "create", day })}
-      />
+      {/*
+       * Desktop puts the month and the upcoming list side by side. Below lg they
+       * stack into one scrolling column so neither gets squeezed out.
+       */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden scroll-thin">
+        <MobileTopBar title="Calendar" />
 
+        <CalendarView
+          events={events}
+          cursor={cursor}
+          onCursorChange={setCursor}
+          selectedDay={selectedDay}
+          onSelectDay={setSelectedDay}
+          onCreateOn={(day) => setModal({ mode: "create", day })}
+          onOpenEvent={(event) => setModal({ mode: "edit", event })}
+        />
+
+        <UpcomingPanel
+          events={events}
+          selectedDay={selectedDay}
+          onOpenEvent={(event) => setModal({ mode: "edit", event })}
+          onCreateOn={(day) => setModal({ mode: "create", day })}
+        />
+      </div>
+
+      <MobileNav />
       <EventModal state={modal} onClose={() => setModal({ mode: "closed" })} />
     </main>
   );

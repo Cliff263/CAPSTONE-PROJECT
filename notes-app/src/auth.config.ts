@@ -5,7 +5,9 @@ export const googleEnabled = Boolean(
   process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET,
 );
 
-const PUBLIC_ROUTES = ["/login", "/signup"];
+// `/s/` is excluded by the proxy matcher too; listed here so that a shared note
+// stays reachable even if that matcher is ever loosened.
+const PUBLIC_ROUTES = ["/login", "/signup", "/forgot", "/reset", "/verify", "/s/"];
 
 /**
  * Edge-safe half of the Auth.js setup: no database adapter and no bcrypt, so it
@@ -23,6 +25,12 @@ export const authConfig = {
     : [],
   session: { strategy: "jwt" },
   pages: { signIn: "/login", error: "/login" },
+  /*
+   * Without this, Auth.js refuses to run behind any host it can't verify and
+   * every production sign-in fails with `error=Configuration`. Vercel sets the
+   * host itself; self-hosting (or `next start` locally) needs it stated.
+   */
+  trustHost: true,
   callbacks: {
     authorized({ auth, request }) {
       const signedIn = Boolean(auth?.user);
@@ -30,7 +38,10 @@ export const authConfig = {
       const isPublic = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
 
       if (isPublic) {
-        if (signedIn) return Response.redirect(new URL("/", request.nextUrl));
+        // A signed-in visitor following a reset or confirmation link should
+        // still land on that page rather than being bounced to the workspace.
+        const isEntry = pathname === "/login" || pathname === "/signup";
+        if (signedIn && isEntry) return Response.redirect(new URL("/", request.nextUrl));
         return true;
       }
 

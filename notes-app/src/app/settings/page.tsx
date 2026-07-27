@@ -1,69 +1,65 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Loader2, LogOut, Moon, Sun, Trash2 } from "lucide-react";
+import { Check, Download, Loader2, LogOut, Moon, Sun, Trash2 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { MobileNav } from "@/components/mobile-nav";
+import { MobileTopBar } from "@/components/mobile-top-bar";
 import { Sidebar } from "@/components/sidebar";
+import { SHORTCUTS } from "@/lib/shortcuts";
+import { SidebarDrawer } from "@/components/sidebar-drawer";
+import { TextReveal } from "@/components/motion";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
+import { useAccount, useDeleteAccount, useUpdateAccount } from "@/hooks/use-account";
 import { useNotesStore } from "@/store/notes-store";
 
-type Account = {
-  name: string | null;
-  email: string;
-  createdAt: string;
-  hasPassword: boolean;
-  noteCount: number;
-  eventCount: number;
-};
+type InstallPromptEvent = Event & { prompt: () => Promise<void> };
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
-  const loadNotes = useNotesStore((state) => state.load);
-  const notesStatus = useNotesStore((state) => state.status);
   const view = useNotesStore((state) => state.view);
   const setView = useNotesStore((state) => state.setView);
   const sidebarOpen = useNotesStore((state) => state.sidebarOpen);
 
-  const [account, setAccount] = useState<Account | null>(null);
-  const [name, setName] = useState("");
+  const { data: account } = useAccount();
+  const updateAccount = useUpdateAccount();
+  const deleteAccountMutation = useDeleteAccount();
+  const [draftName, setDraftName] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
 
   useEffect(() => {
-    if (notesStatus === "idle") void loadNotes();
-  }, [notesStatus, loadNotes]);
-
-  useEffect(() => {
-    void (async () => {
-      const response = await fetch("/api/account");
-      if (!response.ok) return;
-      const data: Account = await response.json();
-      setAccount(data);
-      setName(data.name ?? "");
-    })();
+    // Chromium fires this when the app qualifies for installation.
+    function onPrompt(event: Event) {
+      event.preventDefault();
+      setInstallPrompt(event as InstallPromptEvent);
+    }
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
   }, []);
+
+  // The field shows the saved name until the user types, so no effect is
+  // needed to seed it once the account query resolves.
+  const name = draftName ?? account?.name ?? "";
 
   async function saveName() {
     if (!name.trim() || name === account?.name) return;
     setSaveState("saving");
-    const response = await fetch("/api/account", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    if (response.ok) {
-      setAccount((current) => (current ? { ...current, name } : current));
+    try {
+      await updateAccount.mutateAsync(name);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 1600);
-    } else {
+    } catch {
       setSaveState("idle");
     }
   }
 
   async function deleteAccount() {
-    await fetch("/api/account", { method: "DELETE" });
+    await deleteAccountMutation.mutateAsync();
     await signOut({ redirectTo: "/login" });
   }
 
@@ -76,24 +72,23 @@ export default function SettingsPage() {
             animate={{ width: 248, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="h-full shrink-0 overflow-hidden"
+            className="hidden h-full shrink-0 overflow-hidden lg:block"
           >
-            <Sidebar section="settings" />
+            <Sidebar />
           </motion.div>
         )}
       </AnimatePresence>
 
+      <SidebarDrawer />
+
       <section className="relative min-w-0 flex-1 overflow-y-auto bg-surface scroll-thin">
+        <MobileTopBar title="Settings" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-56 aurora opacity-50" />
 
-        <div className="relative mx-auto w-full max-w-[640px] px-6 py-10">
-          <motion.h1
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glow-text text-[26px] font-semibold tracking-tight"
-          >
-            Settings
-          </motion.h1>
+        <div className="pb-navbar relative mx-auto w-full max-w-[640px] px-4 py-8 sm:px-6 sm:py-10">
+          <h1 className="glow-text text-[26px] font-semibold tracking-tight">
+            <TextReveal text="Settings" />
+          </h1>
           <p className="mt-1 text-[13px] text-muted">
             Your account, how the workspace looks, and what happens to your data.
           </p>
@@ -104,10 +99,10 @@ export default function SettingsPage() {
               <div className="flex gap-2">
                 <input
                   value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  onChange={(event) => setDraftName(event.target.value)}
                   onBlur={saveName}
                   placeholder="Your name"
-                  className="h-9 flex-1 rounded-lg border border-line bg-input px-3 text-[13px] transition focus:border-line-strong"
+                  className="h-9 flex-1 rounded-lg border border-line field bg-input px-3 transition focus:border-line-strong"
                 />
                 <button
                   type="button"
@@ -195,6 +190,90 @@ export default function SettingsPage() {
               <Stat label="Notes" value={account?.noteCount ?? 0} />
               <Stat label="Events" value={account?.eventCount ?? 0} />
             </div>
+
+            <div className="border-t border-line pt-4">
+              <p className="text-[13px]">Export every note</p>
+              <p className="mt-0.5 text-[11px] text-muted-2">
+                All your notes in one document, newest first. Archived notes are
+                included only if you tick the box.
+              </p>
+
+              <label className="mt-2.5 flex items-center gap-2 text-[12px] text-muted">
+                <input
+                  type="checkbox"
+                  checked={includeArchived}
+                  onChange={(event) => setIncludeArchived(event.target.checked)}
+                  className="size-3.5 accent-[var(--glow-1)]"
+                />
+                Include archived notes
+              </label>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(
+                  [
+                    ["pdf", "PDF"],
+                    ["docx", "Word"],
+                    ["md", "Markdown"],
+                    ["txt", "Text"],
+                  ] as const
+                ).map(([format, label]) => (
+                  <button
+                    key={format}
+                    type="button"
+                    onClick={() => {
+                      window.location.href = `/api/notes/export?format=${format}&archived=${includeArchived}`;
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-[12px] text-muted transition hover:bg-card-hover hover:text-foreground"
+                  >
+                    <Download className="size-3.5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          <Card title="Install" delay={0.17}>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[13px]">Install Square Notes</p>
+                <p className="mt-0.5 text-[11px] text-muted-2">
+                  {installPrompt
+                    ? "Adds it to your home screen or dock, opening without browser chrome."
+                    : "Use your browser's install or “Add to Home Screen” option. Once installed, your notes stay readable offline."}
+                </p>
+              </div>
+
+              {installPrompt && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await installPrompt.prompt();
+                    setInstallPrompt(null);
+                  }}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg bg-btn px-3 py-1.5 text-[12px] font-medium text-btn-foreground transition hover:opacity-90"
+                >
+                  <Download className="size-3.5" />
+                  Install
+                </button>
+              )}
+            </div>
+          </Card>
+
+          <Card title="Keyboard shortcuts" delay={0.18}>
+            <div className="-my-1">
+              {SHORTCUTS.map((shortcut) => (
+                <div
+                  key={shortcut.keys}
+                  className="flex items-center justify-between gap-3 border-t border-line py-2 first:border-t-0"
+                >
+                  <span className="text-[12px] text-muted">{shortcut.description}</span>
+                  <kbd className="shrink-0 rounded border border-line bg-panel px-1.5 py-0.5 font-mono text-[11px] text-muted-2">
+                    {shortcut.keys}
+                  </kbd>
+                </div>
+              ))}
+            </div>
           </Card>
 
           <Card title="Account" delay={0.2}>
@@ -245,6 +324,8 @@ export default function SettingsPage() {
           </Card>
         </div>
       </section>
+
+      <MobileNav />
     </main>
   );
 }
